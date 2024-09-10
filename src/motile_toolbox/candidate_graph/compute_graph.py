@@ -5,7 +5,6 @@ import networkx as nx
 import numpy as np
 
 from .conflict_sets import compute_conflict_sets
-from .iou import add_iou
 from .utils import add_cand_edges, nodes_from_points_list, nodes_from_segmentation
 
 logger = logging.getLogger(__name__)
@@ -13,8 +12,10 @@ logger = logging.getLogger(__name__)
 
 def get_candidate_graph(
     segmentation: np.ndarray,
-    max_edge_distance: float,
-    iou: bool = False,
+    max_edge_distance: float | None = None,
+    num_nearest_neighbours: int | None = None,
+    direction_candidate_graph: str = "backward",
+    dT: int = 1,
 ) -> tuple[nx.DiGraph, list[set[Any]] | None]:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
     centroid of each segmentation and edges are added for all nodes in adjacent frames
@@ -27,12 +28,18 @@ def get_candidate_graph(
         max_edge_distance (float): Maximum distance that objects can travel between
             frames. All nodes with centroids within this distance in adjacent frames
             will by connected with a candidate edge.
-        iou (bool, optional): Whether to include IOU on the candidate graph.
-            Defaults to False.
+        num_nearest_neighbours (int): Number of spatial neighbours to connect each
+            segmentation to.
+        dT (int): Edges will be built between frames which are separated by
+            `dT` frames. If `dT ==1`, then frames `t` and `t+1` are connected. If
+            `dT==2`, then frames `t` and `t+1` and frames `t` and `t+2` are
+            connected.
+        direction_candidate_graph (str): One of "forward" or "backward".
+            Implies in which temporal direction, the candidate graph is built.
 
     Returns:
         tuple[nx.DiGraph, list[set[Any]] | None]: A candidate graph that can be passed
-        to the motile solver, and a list of conflicting node ids.
+            to the motile solver, and a list of conflicting node ids.
     """
     num_hypotheses = segmentation.shape[1]
 
@@ -44,10 +51,11 @@ def get_candidate_graph(
     add_cand_edges(
         cand_graph,
         max_edge_distance=max_edge_distance,
+        num_nearest_neighbours=num_nearest_neighbours,
+        direction_candidate_graph=direction_candidate_graph,
         node_frame_dict=node_frame_dict,
+        dT=dT,
     )
-    if iou:
-        add_iou(cand_graph, segmentation, node_frame_dict)
 
     logger.info(f"Candidate edges: {cand_graph.number_of_edges()}")
 
