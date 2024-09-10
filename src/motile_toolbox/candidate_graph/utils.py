@@ -54,9 +54,22 @@ def nodes_from_segmentation(
     node_frame_dict: dict[int, list[Any]] = {}
     print("Extracting nodes from segmentation")
     num_hypotheses = segmentation.shape[1]
+
     for t in tqdm(range(len(segmentation))):
-        segs = segmentation[t]
+        if t == 0:
+            segs_tm1 = np.zeros_like(segmentation[t])
+        else:
+            segs_tm1 = segmentation[t - 1]
+
+        segs = segmentation[t]  # C H W
+
+        if t == len(segmentation) - 1:
+            segs_tp1 = np.zeros_like(segmentation[t])
+        else:
+            segs_tp1 = segmentation[t + 1]
+
         hypo_id: int | None
+
         for hypo_id, hypo in enumerate(segs):
             if num_hypotheses == 1:
                 hypo_id = None
@@ -67,6 +80,11 @@ def nodes_from_segmentation(
                 attrs = {
                     NodeAttr.TIME.value: t,
                 }
+                if np.sum(segs) > 0 and np.sum(segs_tp1) == 0:  # disappearance
+                    attrs[NodeAttr.IGNORE_DISAPPEAR_COST.value] = True
+                if np.sum(segs_tm1) == 0 and np.sum(segs) > 0:  # appearance
+                    attrs[NodeAttr.IGNORE_APPEAR_COST.value] = True
+
                 attrs[NodeAttr.SEG_ID.value] = regionprop.label
                 if hypo_id is not None:
                     attrs[NodeAttr.SEG_HYPO.value] = hypo_id
@@ -78,6 +96,7 @@ def nodes_from_segmentation(
                 if t not in node_frame_dict:
                     node_frame_dict[t] = []
                 node_frame_dict[t].extend(nodes_in_frame)
+
     return cand_graph, node_frame_dict
 
 
