@@ -155,14 +155,20 @@ def _compute_node_frame_dict(cand_graph: nx.DiGraph) -> dict[int, list[Any]]:
 
 
 def create_kdtree(cand_graph: nx.DiGraph, node_ids: Iterable[Any]) -> KDTree:
+    """Builds a kd-tree from available positions of segmentations at a given time
+    frame.
+    """
     positions = [cand_graph.nodes[node][NodeAttr.POS.value] for node in node_ids]
-    return KDTree(positions)
+    return KDTree(positions), positions
 
 
 def add_cand_edges(
     cand_graph: nx.DiGraph,
     max_edge_distance: float,
+    num_nearest_neighbours: int,
+    direction_candidate_graph: str,
     node_frame_dict: None | dict[int, list[Any]] = None,
+    dT: int = 1,
 ) -> None:
     """Add candidate edges to a candidate graph by connecting all nodes in adjacent
     frames that are closer than max_edge_distance. Also adds attributes to the edges.
@@ -173,29 +179,68 @@ def add_cand_edges(
         max_edge_distance (float): Maximum distance that objects can travel between
             frames. All nodes within this distance in adjacent frames will by connected
             with a candidate edge.
+        num_nearest_neighbours (int): Each segmentation is connected to its
+            `num_nearest_neighbours` spatial neighbours in the next frame.
+        direction_candidate_graph (str): One of "forward" or "backward".
+            Indicates the temporal direction.
         node_frame_dict (dict[int, list[Any]] | None, optional): A mapping from frames
             to node ids. If not provided, it will be computed from cand_graph. Defaults
             to None.
+        dT (int): If `dT==1`, then edges are constructed between frames `t` and
+            `t+1`. If `dT==2`, then edges are constructed between frames `t`
+            and `t+1`, and also `t` and `t+2`. And so on. Allows for including
+            skip edges.
     """
     print("Extracting candidate edges")
     if not node_frame_dict:
         node_frame_dict = _compute_node_frame_dict(cand_graph)
+    if direction_candidate_graph == "forward":
+        frames = sorted(node_frame_dict.keys())
+    elif direction_candidate_graph == "backward":
+        frames = sorted(node_frame_dict.keys(), reverse=True)
 
-    frames = sorted(node_frame_dict.keys())
-    prev_node_ids = node_frame_dict[frames[0]]
-    prev_kdtree = create_kdtree(cand_graph, prev_node_ids)
     for frame in tqdm(frames):
-        if frame + 1 not in node_frame_dict:
-            continue
-        next_node_ids = node_frame_dict[frame + 1]
-        next_kdtree = create_kdtree(cand_graph, next_node_ids)
+        prev_node_ids = node_frame_dict[frame]
+        prev_kdtree, prev_positions = create_kdtree(cand_graph, prev_node_ids)
+        if direction_candidate_graph == "forward":
+            for t_next in range(frame + 1, frame + dT + 1):
+                if t_next not in node_frame_dict:
+                    continue
+                next_node_ids = node_frame_dict[t_next]
+                next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
+                if num_nearest_neighbours is not None:
+                    _, matched_indices = next_kdtree.query(
+                        x=prev_positions, k=num_nearest_neighbours
+                    )
+                elif max_edge_distance is not None:
+                    matched_indices = prev_kdtree.query_ball_tree(
+                        next_kdtree, max_edge_distance
+                    )
 
-        matched_indices = prev_kdtree.query_ball_tree(next_kdtree, max_edge_distance)
+                for prev_node_id, next_node_indices in zip(
+                    prev_node_ids, matched_indices
+                ):
+                    for next_node_index in next_node_indices:
+                        next_node_id = next_node_ids[next_node_index]
+                        cand_graph.add_edge(prev_node_id, next_node_id)
+        elif direction_candidate_graph == "backward":
+            for t_next in range(frame - 1, frame - dT - 1, -1):
+                if t_next not in node_frame_dict:
+                    continue
+                next_node_ids = node_frame_dict[t_next]
+                next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
+                if num_nearest_neighbours is not None:
+                    _, matched_indices = next_kdtree.query(
+                        x=prev_positions, k=num_nearest_neighbours
+                    )
+                elif max_edge_distance is not None:
+                    matched_indices = prev_kdtree.query_ball_tree(
+                        next_kdtree, max_edge_distance
+                    )
 
-        for prev_node_id, next_node_indices in zip(prev_node_ids, matched_indices):
-            for next_node_index in next_node_indices:
-                next_node_id = next_node_ids[next_node_index]
-                cand_graph.add_edge(prev_node_id, next_node_id)
-
-        prev_node_ids = next_node_ids
-        prev_kdtree = next_kdtree
+                for prev_node_id, next_node_indices in zip(
+                    prev_node_ids, matched_indices
+                ):
+                    for next_node_index in next_node_indices:
+                        next_node_id = next_node_ids[next_node_index]
+                        cand_graph.add_edge(prev_node_id, next_node_id)
