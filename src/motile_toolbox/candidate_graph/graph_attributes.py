@@ -13,6 +13,7 @@ class NodeAttr(Enum):
     SEG_HYPO = "seg_hypo"
     IGNORE_APPEAR_COST = "ignore_appear_cost"
     IGNORE_DISAPPEAR_COST = "ignore_disappear_cost"
+    PINNED = "pinned"
 
 
 class EdgeAttr(Enum):
