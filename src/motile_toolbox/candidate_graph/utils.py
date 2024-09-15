@@ -126,7 +126,7 @@ def nodes_from_points_list(
         # assume seg_id, t, [z], y, x, p_id
         id_ = int(point[0])
         t = int(point[1])
-        pos = list(point[2:-1].astype(int))
+        pos = list(point[2:-1])
         node_id = str(t) + "_" + str(id_)  # t_id
         attrs = {
             NodeAttr.TIME.value: t,
@@ -221,7 +221,8 @@ def add_cand_edges(
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
                     _, matched_indices = next_kdtree.query(
-                        x=prev_positions, k=num_nearest_neighbours
+                        x=prev_positions,
+                        k=np.minimum(num_nearest_neighbours, len(next_node_ids)),
                     )
                 elif max_edge_distance is not None:
                     matched_indices = prev_kdtree.query_ball_tree(
@@ -242,16 +243,17 @@ def add_cand_edges(
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
                     _, matched_indices = next_kdtree.query(
-                        x=prev_positions, k=num_nearest_neighbours
+                        x=prev_positions,
+                        k=np.minimum(num_nearest_neighbours, len(next_node_ids)),
                     )
                 elif max_edge_distance is not None:
                     matched_indices = prev_kdtree.query_ball_tree(
                         next_kdtree, max_edge_distance
                     )
-
                 for prev_node_id, next_node_indices in zip(
                     prev_node_ids, matched_indices
                 ):
+
                     for next_node_index in next_node_indices:
                         next_node_id = next_node_ids[next_node_index]
                         cand_graph.add_edge(prev_node_id, next_node_id)
