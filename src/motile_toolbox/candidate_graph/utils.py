@@ -250,10 +250,11 @@ def add_cand_edges(
                     matched_indices = prev_kdtree.query_ball_tree(
                         next_kdtree, max_edge_distance
                     )
+                if len(matched_indices.shape) == 1: # only one object at next frame
+                    matched_indices = matched_indices[:, np.newaxis]
                 for prev_node_id, next_node_indices in zip(
                     prev_node_ids, matched_indices
                 ):
-
                     for next_node_index in next_node_indices:
                         next_node_id = next_node_ids[next_node_index]
                         cand_graph.add_edge(prev_node_id, next_node_id)
