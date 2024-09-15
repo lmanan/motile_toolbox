@@ -120,16 +120,27 @@ def nodes_from_points_list(
     # also construct a dictionary from time frame to node_id for efficiency
     node_frame_dict: dict[int, list[Any]] = {}
     print("Extracting nodes from points list")
+    t_min = int(np.min(points_list[:, 1]))
+    t_max = int(np.max(points_list[:, 1]))
     for i, point in enumerate(points_list):
-        # assume t, [z], y, x
-        t = point[0]
-        pos = list(point[1:])
-        node_id = i
+        # assume seg_id, t, [z], y, x, p_id
+        id_ = int(point[0])
+        t = int(point[1])
+        pos = list(point[2:-1].astype(int))
+        node_id = str(t) + "_" + str(id_)  # t_id
         attrs = {
             NodeAttr.TIME.value: t,
             NodeAttr.POS.value: pos,
         }
+        if t == t_min:
+            attrs[NodeAttr.IGNORE_APPEAR_COST.value] = True
+        if t == t_max:
+            attrs[NodeAttr.IGNORE_DISAPPEAR_COST.value] = True
+
+        attrs[NodeAttr.SEG_ID.value] = id_
+        attrs[NodeAttr.PINNED.value] = True
         cand_graph.add_node(node_id, **attrs)
+
         if t not in node_frame_dict:
             node_frame_dict[t] = []
         node_frame_dict[t].append(node_id)
