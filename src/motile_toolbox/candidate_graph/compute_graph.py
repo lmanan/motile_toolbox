@@ -70,7 +70,10 @@ def get_candidate_graph(
 
 def get_candidate_graph_from_points_list(
     points_list: np.ndarray,
-    max_edge_distance: float,
+    max_edge_distance: float | None,
+    num_nearest_neighbours: int | None,
+    direction_candidate_graph: str = "backward",
+    dT: int = 1,
 ) -> nx.DiGraph:
     """Construct a candidate graph from a points list.
 
@@ -92,6 +95,9 @@ def get_candidate_graph_from_points_list(
     add_cand_edges(
         cand_graph,
         max_edge_distance=max_edge_distance,
+        num_nearest_neighbours=num_nearest_neighbours,
+        direction_candidate_graph=direction_candidate_graph,
         node_frame_dict=node_frame_dict,
+        dT=dT,
     )
     return cand_graph
