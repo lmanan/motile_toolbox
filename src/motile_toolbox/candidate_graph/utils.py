@@ -251,6 +251,7 @@ def add_cand_edges(
                         next_kdtree, max_edge_distance
                     )
                 if len(matched_indices.shape) == 1: # only one object at next frame
+                    print(matched_indices)
                     matched_indices = matched_indices[:, np.newaxis]
                 for prev_node_id, next_node_indices in zip(
                     prev_node_ids, matched_indices
