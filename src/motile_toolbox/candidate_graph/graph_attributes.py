@@ -14,6 +14,7 @@ class NodeAttr(Enum):
     IGNORE_APPEAR_COST = "ignore_appear_cost"
     IGNORE_DISAPPEAR_COST = "ignore_disappear_cost"
     PINNED = "pinned"
+    NODE_EMBEDDING = "node_embedding"
 
 
 class EdgeAttr(Enum):
@@ -23,3 +24,4 @@ class EdgeAttr(Enum):
     """
 
     IOU = "iou"
+    EDGE_EMBEDDING = "edge_embedding"
