@@ -122,7 +122,7 @@ def nodes_from_points_list(
     print("Extracting nodes from points list")
     t_min = int(np.min(points_list[:, 1]))
     t_max = int(np.max(points_list[:, 1]))
-    for i, point in enumerate(points_list):
+    for _, point in enumerate(points_list):
         # assume seg_id, t, [z], y, x, p_id
         id_ = int(point[0])
         t = int(point[1])
@@ -180,6 +180,7 @@ def add_cand_edges(
     direction_candidate_graph: str,
     node_frame_dict: None | dict[int, list[Any]] = None,
     dT: int = 1,
+    whitening: bool = False,
 ) -> None:
     """Add candidate edges to a candidate graph by connecting all nodes in adjacent
     frames that are closer than max_edge_distance. Also adds attributes to the edges.
@@ -201,6 +202,8 @@ def add_cand_edges(
             `t+1`. If `dT==2`, then edges are constructed between frames `t`
             and `t+1`, and also `t` and `t+2`. And so on. Allows for including
             skip edges.
+        whitening (bool) : If True, features are made to have 0 mean and
+            standard deviation 1.
     """
     print("Extracting candidate edges")
     if not node_frame_dict:
@@ -210,6 +213,8 @@ def add_cand_edges(
     elif direction_candidate_graph == "backward":
         frames = sorted(node_frame_dict.keys(), reverse=True)
 
+    if whitening:
+        distances_list = []
     for frame in tqdm(frames):
         prev_node_ids = node_frame_dict[frame]
         prev_kdtree, prev_positions = create_kdtree(cand_graph, prev_node_ids)
@@ -220,10 +225,12 @@ def add_cand_edges(
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
-                    _, matched_indices = next_kdtree.query(
+                    distances, matched_indices = next_kdtree.query(
                         x=prev_positions,
                         k=np.minimum(num_nearest_neighbours, len(next_node_ids)),
                     )
+                    if whitening:
+                        distances_list.extend(distances)
                 elif max_edge_distance is not None:
                     matched_indices = prev_kdtree.query_ball_tree(
                         next_kdtree, max_edge_distance
@@ -242,15 +249,17 @@ def add_cand_edges(
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
-                    _, matched_indices = next_kdtree.query(
+                    distances, matched_indices = next_kdtree.query(
                         x=prev_positions,
                         k=np.minimum(num_nearest_neighbours, len(next_node_ids)),
                     )
+                    if whitening and len(next_node_ids) >= num_nearest_neighbours:
+                        distances_list.extend(distances)
                 elif max_edge_distance is not None:
                     matched_indices = prev_kdtree.query_ball_tree(
                         next_kdtree, max_edge_distance
                     )
-                if len(matched_indices.shape) == 1: # only one object at next frame
+                if len(matched_indices.shape) == 1:  # only one object at next frame
                     print(matched_indices)
                     matched_indices = matched_indices[:, np.newaxis]
                 for prev_node_id, next_node_indices in zip(
@@ -259,3 +268,5 @@ def add_cand_edges(
                     for next_node_index in next_node_indices:
                         next_node_id = next_node_ids[next_node_index]
                         cand_graph.add_edge(prev_node_id, next_node_id)
+    if whitening:
+        return distances_list

@@ -74,6 +74,7 @@ def get_candidate_graph_from_points_list(
     num_nearest_neighbours: int | None,
     direction_candidate_graph: str = "backward",
     dT: int = 1,
+    whitening: bool = False,
 ) -> nx.DiGraph:
     """Construct a candidate graph from a points list.
 
@@ -83,21 +84,32 @@ def get_candidate_graph_from_points_list(
         max_edge_distance (float): Maximum distance that objects can travel between
             frames. All nodes with centroids within this distance in adjacent frames
             will by connected with a candidate edge.
+        num_nearest_neighbours (int): Number of nearest spatial neighbours to
+            connect a segmentation to.
+        direction_candidate_graph (str): One of 'forward' or 'backward'.
+        dT (int): Connect edges between frames with a difference of dT frames.
+        whitening (bool): If True, features are made to be 0 mean and 1
+            standard deviation.
 
     Returns:
         nx.DiGraph: A candidate graph that can be passed to the motile solver.
-        Multiple hypotheses not supported for points input.
+            Multiple hypotheses not supported for points input.
     """
     # add nodes
     cand_graph, node_frame_dict = nodes_from_points_list(points_list)
     logger.info(f"Candidate nodes: {cand_graph.number_of_nodes()}")
     # add edges
-    add_cand_edges(
+    distances_list = add_cand_edges(
         cand_graph,
         max_edge_distance=max_edge_distance,
         num_nearest_neighbours=num_nearest_neighbours,
         direction_candidate_graph=direction_candidate_graph,
         node_frame_dict=node_frame_dict,
         dT=dT,
+        whitening=whitening,
     )
-    return cand_graph
+    distances_list = np.asarray(distances_list)
+    if whitening:
+        return cand_graph, np.mean(distances_list), np.std(distances_list)
+    else:
+        return cand_graph, None, None
