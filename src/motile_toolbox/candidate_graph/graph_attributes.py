@@ -15,7 +15,8 @@ class NodeAttr(Enum):
     IGNORE_DISAPPEAR_COST = "ignore_disappear_cost"
     PINNED = "pinned"
     NODE_EMBEDDING = "node_embedding"
-
+    FEATURE_MASK_APPEAR = "feature_mask_appear"
+    FEATURE_MASK_DISAPPEAR = "feature_mask_disappear"
 
 class EdgeAttr(Enum):
     """Edge attributes that can be added to candidate graph using the toolbox.
@@ -25,3 +26,4 @@ class EdgeAttr(Enum):
 
     IOU = "iou"
     EDGE_EMBEDDING = "edge_embedding"
+    GROUNDTRUTH = "groundtruth"
