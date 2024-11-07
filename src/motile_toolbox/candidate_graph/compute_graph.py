@@ -74,7 +74,7 @@ def get_candidate_graph_from_points_list(
     num_nearest_neighbours: int | None,
     direction_candidate_graph: str = "backward",
     dT: int = 1,
-    whitening: bool = False,
+    whitening: bool = True,
 ) -> nx.DiGraph:
     """Construct a candidate graph from a points list.
 
