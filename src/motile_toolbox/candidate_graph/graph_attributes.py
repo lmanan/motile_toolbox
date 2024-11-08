@@ -9,6 +9,7 @@ class NodeAttr(Enum):
 
     POS = "pos"
     TIME = "time"
+    VELOCITY = "velocity"
     SEG_ID = "seg_id"
     SEG_HYPO = "seg_hypo"
     IGNORE_APPEAR_COST = "ignore_appear_cost"
