@@ -221,7 +221,7 @@ def add_cand_edges(
         if direction_candidate_graph == "forward":
             for t_next in range(frame + 1, frame + dT + 1):
                 if t_next not in node_frame_dict:
-                    continue
+                    break # this must indicate that we reached a frame marking gap between two sequences
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
@@ -245,7 +245,7 @@ def add_cand_edges(
         elif direction_candidate_graph == "backward":
             for t_next in range(frame - 1, frame - dT - 1, -1):
                 if t_next not in node_frame_dict:
-                    continue
+                    break # this must indicate that we reached a frame marking gap between two sequences
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
