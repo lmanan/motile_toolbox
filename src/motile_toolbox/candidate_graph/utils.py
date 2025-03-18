@@ -86,6 +86,7 @@ def nodes_from_segmentation(
                     attrs[NodeAttr.IGNORE_APPEAR_COST.value] = True
 
                 attrs[NodeAttr.SEG_ID.value] = regionprop.label
+                attrs[NodeAttr.AREA.value] = regionprop.area
                 if hypo_id is not None:
                     attrs[NodeAttr.SEG_HYPO.value] = hypo_id
                 centroid = regionprop.centroid  # [z,] y, x
@@ -119,6 +120,16 @@ def nodes_from_points_list(
     cand_graph = nx.DiGraph()
     # also construct a dictionary from time frame to node_id for efficiency
     node_frame_dict: dict[int, list[Any]] = {}
+    for _, point in enumerate(points_list):
+        
+        # assume seg_id, t, [z], y, x, p_id
+        id_ = int(point[0])
+        t = int(point[1])
+        node_id = str(t) + "_" + str(id_)  # t_id
+        if t not in node_frame_dict:
+            node_frame_dict[t] = []
+        node_frame_dict[t].append(node_id)
+
     print("Extracting nodes from points list")
     t_min = int(np.min(points_list[:, 1]))
     t_max = int(np.max(points_list[:, 1]))
@@ -137,13 +148,22 @@ def nodes_from_points_list(
         if t == t_max:
             attrs[NodeAttr.IGNORE_DISAPPEAR_COST.value] = True
 
+        if (
+            t < t_max
+            and len(node_frame_dict[t]) > 0
+            and t+1 not in node_frame_dict
+        ):
+            attrs[NodeAttr.IGNORE_DISAPPEAR_COST.value] = True
+        if (
+            t > t_min
+            and t-1 not in node_frame_dict
+            and len(node_frame_dict[t]) > 0
+        ):
+            attrs[NodeAttr.IGNORE_APPEAR_COST.value] = True
         attrs[NodeAttr.SEG_ID.value] = id_
         attrs[NodeAttr.PINNED.value] = True
         cand_graph.add_node(node_id, **attrs)
 
-        if t not in node_frame_dict:
-            node_frame_dict[t] = []
-        node_frame_dict[t].append(node_id)
     return cand_graph, node_frame_dict
 
 
@@ -221,7 +241,9 @@ def add_cand_edges(
         if direction_candidate_graph == "forward":
             for t_next in range(frame + 1, frame + dT + 1):
                 if t_next not in node_frame_dict:
-                    break # this must indicate that we reached a frame marking gap between two sequences
+                    break  
+                    # this must indicate that we reached a frame 
+                    # marking gap between two sequences
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:
@@ -245,7 +267,9 @@ def add_cand_edges(
         elif direction_candidate_graph == "backward":
             for t_next in range(frame - 1, frame - dT - 1, -1):
                 if t_next not in node_frame_dict:
-                    break # this must indicate that we reached a frame marking gap between two sequences
+                    break  
+                    # this must indicate that we reached a frame 
+                    # marking gap between two sequences
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
                 if num_nearest_neighbours is not None:

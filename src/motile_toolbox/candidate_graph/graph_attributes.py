@@ -18,6 +18,7 @@ class NodeAttr(Enum):
     NODE_EMBEDDING = "node_embedding"
     FEATURE_MASK_APPEAR = "feature_mask_appear"
     FEATURE_MASK_DISAPPEAR = "feature_mask_disappear"
+    AREA = "area" 
 
 class EdgeAttr(Enum):
     """Edge attributes that can be added to candidate graph using the toolbox.
