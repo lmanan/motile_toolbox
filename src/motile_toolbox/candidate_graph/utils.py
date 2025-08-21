@@ -114,8 +114,8 @@ def nodes_from_points_list(
     node_ids for efficient edge adding.
 
     Args:
-        points_list (np.ndarray): An NxD numpy array with N points and D
-            (3 or 4) dimensions. Dimensions should be in order (t, [z], y, x).
+        points_list (np.ndarray): An NxD numpy array with N points and D (5 or 6) dimensions.
+        Dimensions should be in order (id, t, [z], y, x, parent_id).
 
     Returns:
         tuple[nx.DiGraph, dict[int, list[Any]]]: A candidate graph with only nodes,
@@ -194,7 +194,7 @@ def create_kdtree(cand_graph: nx.DiGraph, node_ids: Iterable[Any]) -> KDTree:
 
 def add_cand_edges(
     cand_graph: nx.DiGraph,
-    num_nearest_neighbours: int | None = 10,
+    num_nearest_neighbours: int | None = None,
     max_edge_distance: float | None = None,
     direction_candidate_graph: Literal["forward", "backward"] = "backward",
     node_frame_dict: None | dict[int, list[Any]] = None,
