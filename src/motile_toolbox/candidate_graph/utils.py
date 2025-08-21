@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 
 import networkx as nx
 import numpy as np
@@ -52,7 +52,7 @@ def nodes_from_segmentation(
     cand_graph = nx.DiGraph()
     # also construct a dictionary from time frame to node_id for efficiency
     node_frame_dict: dict[int, list[Any]] = {}
-    print("Extracting nodes from segmentation")
+    logger.info("Extracting nodes from segmentation")
     num_hypotheses = segmentation.shape[1]
 
     for t in tqdm(range(len(segmentation))):
@@ -133,7 +133,7 @@ def nodes_from_points_list(
             node_frame_dict[t] = []
         node_frame_dict[t].append(node_id)
 
-    print("Extracting nodes from points list")
+    logger.info("Extracting nodes from points list")
     t_min = int(np.min(points_list[:, 1]))
     t_max = int(np.max(points_list[:, 1]))
     for _, point in enumerate(points_list):
@@ -141,15 +141,15 @@ def nodes_from_points_list(
         id_ = int(point[0])
         t = int(point[1])
         pos = list(point[2:-1])
-        if len(pos) == 3:  # if only y, x
-            attrs[NodeAttr.Z.value] = pos[-3]
-        attrs[NodeAttr.Y.value] = pos[-2]
-        attrs[NodeAttr.X.value] = pos[-1]
         node_id = str(t) + "_" + str(id_)  # t_id
         attrs = {
             NodeAttr.TIME.value: t,
             NodeAttr.POS.value: pos,
         }
+        if len(pos) == 3:  # if only y, x
+            attrs[NodeAttr.Z.value] = pos[-3]
+        attrs[NodeAttr.Y.value] = pos[-2]
+        attrs[NodeAttr.X.value] = pos[-1]
         if t == t_min:
             attrs[NodeAttr.IGNORE_APPEAR_COST.value] = True
         if t == t_max:
@@ -194,9 +194,9 @@ def create_kdtree(cand_graph: nx.DiGraph, node_ids: Iterable[Any]) -> KDTree:
 
 def add_cand_edges(
     cand_graph: nx.DiGraph,
-    max_edge_distance: float,
-    num_nearest_neighbours: int,
-    direction_candidate_graph: str,
+    num_nearest_neighbours: int | None = 10,
+    max_edge_distance: float | None = None,
+    direction_candidate_graph: Literal["forward", "backward"] = "backward",
     node_frame_dict: None | dict[int, list[Any]] = None,
     dT: int = 1,
     whitening: bool = False,
@@ -207,11 +207,13 @@ def add_cand_edges(
     Args:
         cand_graph (nx.DiGraph): Candidate graph with only nodes populated. Will
             be modified in-place to add edges.
+        num_nearest_neighbours (int): Each segmentation is connected to its
+            `num_nearest_neighbours` spatial neighbours in the next frame.
         max_edge_distance (float): Maximum distance that objects can travel between
             frames. All nodes within this distance in adjacent frames will by connected
             with a candidate edge.
-        num_nearest_neighbours (int): Each segmentation is connected to its
-            `num_nearest_neighbours` spatial neighbours in the next frame.
+        Note, that both `num_nearest_neighbours` and `max_edge_distance` can not
+        be None.
         direction_candidate_graph (str): One of "forward" or "backward".
             Indicates the temporal direction.
         node_frame_dict (dict[int, list[Any]] | None, optional): A mapping from frames
@@ -224,7 +226,12 @@ def add_cand_edges(
         whitening (bool) : If True, features are made to have 0 mean and
             standard deviation 1.
     """
-    print("Extracting candidate edges")
+    logger.info("Extracting candidate edges")
+    if (num_nearest_neighbours is None) == (max_edge_distance is None):
+        raise ValueError(
+            "Exactly one of `num_nearest_neighbours` or `max_edge_distance` must be set (not both or neither)."
+        )
+
     if not node_frame_dict:
         node_frame_dict = _compute_node_frame_dict(cand_graph)
     if direction_candidate_graph == "forward":
