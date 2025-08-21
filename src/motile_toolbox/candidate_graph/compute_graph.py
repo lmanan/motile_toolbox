@@ -79,8 +79,8 @@ def get_candidate_graph_from_points_list(
     """Construct a candidate graph from a points list.
 
     Args:
-        points_list (np.ndarray): An NxD numpy array with N points and D
-            (3 or 4) dimensions. Dimensions should be in order  (t, [z], y, x).
+        points_list (np.ndarray): An NxD numpy array with N points and D (5 or 6) dimensions.
+        Dimensions should be in order  (id_, t, [z], y, x, parent_id).
         max_edge_distance (float): Maximum distance that objects can travel between
             frames. All nodes with centroids within this distance in adjacent frames
             will by connected with a candidate edge.
