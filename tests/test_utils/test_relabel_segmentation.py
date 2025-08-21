@@ -1,7 +1,8 @@
 import numpy as np
-from motile_toolbox.utils import relabel_segmentation
 from numpy.testing import assert_array_equal
 from skimage.draw import disk
+
+from motile_toolbox.utils import relabel_segmentation
 
 
 def test_relabel_segmentation(segmentation_2d, graph_2d):

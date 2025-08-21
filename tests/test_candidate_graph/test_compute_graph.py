@@ -2,6 +2,7 @@ from collections import Counter
 
 import numpy as np
 import pytest
+
 from motile_toolbox.candidate_graph import EdgeAttr, get_candidate_graph
 from motile_toolbox.candidate_graph.compute_graph import (
     get_candidate_graph_from_points_list,

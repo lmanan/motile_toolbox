@@ -2,6 +2,7 @@ from collections import Counter
 
 import networkx as nx
 import numpy as np
+
 from motile_toolbox.candidate_graph import (
     NodeAttr,
     add_cand_edges,
