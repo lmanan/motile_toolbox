@@ -89,8 +89,12 @@ def nodes_from_segmentation(
                 attrs[NodeAttr.AREA.value] = regionprop.area
                 if hypo_id is not None:
                     attrs[NodeAttr.SEG_HYPO.value] = hypo_id
-                centroid = regionprop.centroid  # [z,] y, x
-                attrs[NodeAttr.POS.value] = centroid
+                pos = regionprop.centroid  # [z,] y, x
+                attrs[NodeAttr.POS.value] = pos
+                if len(pos) == 3:  # if only y, x
+                    attrs[NodeAttr.Z.value] = pos[-3]
+                attrs[NodeAttr.Y.value] = pos[-2]
+                attrs[NodeAttr.X.value] = pos[-1]
                 cand_graph.add_node(node_id, **attrs)
                 nodes_in_frame.append(node_id)
             if nodes_in_frame:
@@ -137,6 +141,10 @@ def nodes_from_points_list(
         id_ = int(point[0])
         t = int(point[1])
         pos = list(point[2:-1])
+        if len(pos) == 3:  # if only y, x
+            attrs[NodeAttr.Z.value] = pos[-3]
+        attrs[NodeAttr.Y.value] = pos[-2]
+        attrs[NodeAttr.X.value] = pos[-1]
         node_id = str(t) + "_" + str(id_)  # t_id
         attrs = {
             NodeAttr.TIME.value: t,
