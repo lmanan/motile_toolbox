@@ -121,7 +121,6 @@ def nodes_from_points_list(
     # also construct a dictionary from time frame to node_id for efficiency
     node_frame_dict: dict[int, list[Any]] = {}
     for _, point in enumerate(points_list):
-        
         # assume seg_id, t, [z], y, x, p_id
         id_ = int(point[0])
         t = int(point[1])
@@ -148,17 +147,9 @@ def nodes_from_points_list(
         if t == t_max:
             attrs[NodeAttr.IGNORE_DISAPPEAR_COST.value] = True
 
-        if (
-            t < t_max
-            and len(node_frame_dict[t]) > 0
-            and t+1 not in node_frame_dict
-        ):
+        if t < t_max and len(node_frame_dict[t]) > 0 and t + 1 not in node_frame_dict:
             attrs[NodeAttr.IGNORE_DISAPPEAR_COST.value] = True
-        if (
-            t > t_min
-            and t-1 not in node_frame_dict
-            and len(node_frame_dict[t]) > 0
-        ):
+        if t > t_min and t - 1 not in node_frame_dict and len(node_frame_dict[t]) > 0:
             attrs[NodeAttr.IGNORE_APPEAR_COST.value] = True
         attrs[NodeAttr.SEG_ID.value] = id_
         attrs[NodeAttr.PINNED.value] = True
@@ -241,8 +232,8 @@ def add_cand_edges(
         if direction_candidate_graph == "forward":
             for t_next in range(frame + 1, frame + dT + 1):
                 if t_next not in node_frame_dict:
-                    break  
-                    # this must indicate that we reached a frame 
+                    break
+                    # this must indicate that we reached a frame
                     # marking gap between two sequences
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
@@ -251,13 +242,15 @@ def add_cand_edges(
                         x=prev_positions,
                         k=np.minimum(num_nearest_neighbours, len(next_node_ids)),
                     )
-                    if whitening:
+                    if whitening and len(next_node_ids) >= num_nearest_neighbours:
                         distances_list.extend(distances)
                 elif max_edge_distance is not None:
                     matched_indices = prev_kdtree.query_ball_tree(
                         next_kdtree, max_edge_distance
                     )
 
+                if len(matched_indices.shape) == 1:  # only one object at next frame
+                    matched_indices = matched_indices[:, np.newaxis]
                 for prev_node_id, next_node_indices in zip(
                     prev_node_ids, matched_indices
                 ):
@@ -267,8 +260,8 @@ def add_cand_edges(
         elif direction_candidate_graph == "backward":
             for t_next in range(frame - 1, frame - dT - 1, -1):
                 if t_next not in node_frame_dict:
-                    break  
-                    # this must indicate that we reached a frame 
+                    break
+                    # this must indicate that we reached a frame
                     # marking gap between two sequences
                 next_node_ids = node_frame_dict[t_next]
                 next_kdtree, next_positions = create_kdtree(cand_graph, next_node_ids)
