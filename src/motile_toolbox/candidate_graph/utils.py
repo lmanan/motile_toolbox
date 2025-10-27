@@ -1,6 +1,5 @@
 import logging
-from typing import Any, Iterable, Literal
-
+from typing import Any, Iterable, Literal, Sequence,
 import networkx as nx
 import numpy as np
 from scipy.spatial import KDTree
@@ -91,7 +90,7 @@ def nodes_from_segmentation(
                     attrs[NodeAttr.SEG_HYPO.value] = hypo_id
                 pos = regionprop.centroid  # [z,] y, x
                 attrs[NodeAttr.POS.value] = pos
-                if len(pos) == 3:  # if only y, x
+                if len(pos) == 3:  # if z, y, x
                     attrs[NodeAttr.Z.value] = pos[-3]
                 attrs[NodeAttr.Y.value] = pos[-2]
                 attrs[NodeAttr.X.value] = pos[-1]
@@ -146,7 +145,7 @@ def nodes_from_points_list(
             NodeAttr.TIME.value: t,
             NodeAttr.POS.value: pos,
         }
-        if len(pos) == 3:  # if only y, x
+        if len(pos) == 3:  # if  z, y, x
             attrs[NodeAttr.Z.value] = pos[-3]
         attrs[NodeAttr.Y.value] = pos[-2]
         attrs[NodeAttr.X.value] = pos[-1]
@@ -184,12 +183,14 @@ def _compute_node_frame_dict(cand_graph: nx.DiGraph) -> dict[int, list[Any]]:
     return node_frame_dict
 
 
-def create_kdtree(cand_graph: nx.DiGraph, node_ids: Iterable[Any]) -> KDTree:
+def create_kdtree(cand_graph: nx.DiGraph, node_ids: Iterable[Any]
+) -> tuple[KDTree, list[Sequence[float]]]:
     """Builds a kd-tree from available positions of segmentations at a given time
     frame.
     """
-    positions = [cand_graph.nodes[node][NodeAttr.POS.value] for node in node_ids]
+    positions = [cand_graph.nodes[n][NodeAttr.POS.value] for n in node_ids]
     return KDTree(positions), positions
+
 
 
 def add_cand_edges(
@@ -200,9 +201,9 @@ def add_cand_edges(
     node_frame_dict: None | dict[int, list[Any]] = None,
     dT: int = 1,
     whitening: bool = False,
-) -> None:
+) -> list[float] | None:
     """Add candidate edges to a candidate graph by connecting all nodes in adjacent
-    frames that are closer than max_edge_distance. Also adds attributes to the edges.
+    frames. Also adds attributes to the edges.
 
     Args:
         cand_graph (nx.DiGraph): Candidate graph with only nodes populated. Will
