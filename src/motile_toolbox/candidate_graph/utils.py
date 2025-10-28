@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, Literal, Sequence,
+from typing import Any, Iterable, Literal, Sequence
 import networkx as nx
 import numpy as np
 from scipy.spatial import KDTree
