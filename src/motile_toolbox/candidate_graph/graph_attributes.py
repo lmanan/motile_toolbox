@@ -32,5 +32,6 @@ class EdgeAttr(Enum):
 
     IOU = "iou"
     EDGE_EMBEDDING = "edge_embedding"
+    EDGE_DISTANCE = "edge_distance"
     GROUNDTRUTH = "groundtruth"
     PINNED = "pinned"
